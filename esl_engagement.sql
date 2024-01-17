@@ -28,7 +28,7 @@ BEGIN
 		 created_date DATETIME,
 		 updated_date DATETIME,
 		 lesson_id INT,
-		 lesson_name VARCHAR(20),
+		 lesson_name VARCHAR(225),
 		 through_the_binoculars INT,
 		 wordsearch INT,
 		 anagram INT,
@@ -58,8 +58,9 @@ BEGIN
 				 tepp.gap_fill,
 				 tepp.sentence_drag_and_drop
 	FROM twinkl.twinkl_esl_pupil_progress AS tepp
-		LEFT JOIN twinkl.twinkl_esl_lesson AS tel
+		JOIN twinkl.twinkl_esl_lesson AS tel
 			ON tepp.lesson_id = tel.id;
+
 
 -- Create a new table with the desired structure
 	DROP TEMPORARY TABLE IF EXISTS new_esl;
@@ -67,52 +68,27 @@ BEGIN
 	CREATE TEMPORARY TABLE new_esl
 		(KEY (pupil_id))
 	SELECT el.id,
-				 pupil_id,
-				 created_date AS played_date,
+				 el.pupil_id,
+				 IFNULL(updated_date, created_date) AS played_date,
 				 el.lesson_id,
-				 lesson_name,
-				 level_name,
-				 through_the_binoculars,
-				 wordsearch,
-				 anagram,
-				 reaction,
-				 look_cover_write_check,
-				 matching,
-				 pairing,
-				 quiz,
-				 gap_fill,
-				 sentence_drag_and_drop
+				 el.lesson_name,
+				 tel.level_name,
+				 el.through_the_binoculars,
+				 el.wordsearch,
+				 el.anagram,
+				 el.reaction,
+				 el.look_cover_write_check,
+				 el.matching,
+				 el.pairing,
+				 el.quiz,
+				 el.gap_fill,
+				 el.sentence_drag_and_drop
 	FROM esl_lesson AS el
-		LEFT JOIN twinkl.twinkl_esl_level_lesson AS tell
+		JOIN twinkl.twinkl_esl_level_lesson AS tell
 			ON el.lesson_id = tell.lesson_id
-		LEFT JOIN twinkl.twinkl_esl_level AS tel
-			ON tell.level_id = tel.id
-	WHERE updated_date IS NULL
+		JOIN twinkl.twinkl_esl_level AS tel
+			ON tell.level_id = tel.id;
 
-	UNION ALL
-
-	SELECT el.id,
-				 pupil_id,
-				 updated_date AS played_date,
-				 el.lesson_id,
-				 lesson_name,
-				 level_name,
-				 through_the_binoculars,
-				 wordsearch,
-				 anagram,
-				 reaction,
-				 look_cover_write_check,
-				 matching,
-				 pairing,
-				 quiz,
-				 gap_fill,
-				 sentence_drag_and_drop
-	FROM esl_lesson AS el
-		LEFT JOIN twinkl.twinkl_esl_level_lesson AS tell
-			ON el.lesson_id = tell.lesson_id
-		LEFT JOIN twinkl.twinkl_esl_level AS tel
-			ON tell.level_id = tel.id
-	WHERE updated_date IS NOT NULL;
 
 -- Adding teacher info such as career, country
 
@@ -121,33 +97,34 @@ BEGIN
 	CREATE TEMPORARY TABLE esl_engag
 		(KEY (pupil_id, user_id))
 	SELECT ne.id,
-				 pupil_id,
-				 played_date,
-				 lesson_id,
-				 lesson_name,
-				 level_name,
+				 ne.pupil_id,
+				 ne.played_date,
+				 ne.lesson_id,
+				 ne.lesson_name,
+				 ne.level_name,
 				 p.user_id AS user_id,
-				 car.category_type AS `career`,
+				 car.neat_career_category AS `career`,
 				 c.country AS `country`,
-				 through_the_binoculars,
-				 wordsearch,
-				 anagram,
-				 reaction,
-				 look_cover_write_check,
-				 matching,
-				 pairing,
-				 quiz,
-				 gap_fill,
-				 sentence_drag_and_drop
+				 ne.through_the_binoculars,
+				 ne.wordsearch,
+				 ne.anagram,
+				 ne.reaction,
+				 ne.look_cover_write_check,
+				 ne.matching,
+				 ne.pairing,
+				 ne.quiz,
+				 ne.gap_fill,
+				 ne.sentence_drag_and_drop
 	FROM new_esl AS ne
-		LEFT JOIN twinkl.twinkl_pupil AS p
+		JOIN twinkl.twinkl_pupil AS p
 			ON ne.pupil_id = p.id
 		LEFT JOIN analytics.dx_user u
 			ON u.user_id = p.user_id
-		LEFT JOIN twinkl.twinkl_career car
-			ON car.id = u.career_id
+		LEFT JOIN analytics.career_category_overview car
+			ON car.id = u.career_category_id
 		LEFT JOIN analytics.dx_country c
 			ON c.country_id = u.country_id;
+
 
 -- Creating temporary table to access bundle_id from sub_ux
 
@@ -216,34 +193,35 @@ BEGIN
 		 sentence_drag_and_drop INT,
 		 KEY (pupil_id, user_id))
 		COMMENT '-name-PG-name- -desc-Staging table for esl web app engagement-desc-'
-	SELECT id,
-				 pupil_id,
-				 played_date,
-				 lesson_id,
-				 lesson_name,
-				 level_name,
+	SELECT se.id,
+				 se.pupil_id,
+				 se.played_date,
+				 se.lesson_id,
+				 se.lesson_name,
+				 se.level_name,
 				 se.user_id,
-				 career,
-				 country,
+				 se.career,
+				 se.country,
 				 ub.bundle_name,
-				 through_the_binoculars,
-				 wordsearch,
-				 anagram,
-				 reaction,
-				 look_cover_write_check,
-				 matching,
-				 pairing,
-				 quiz,
-				 gap_fill,
-				 sentence_drag_and_drop
+				 se.through_the_binoculars,
+				 se.wordsearch,
+				 se.anagram,
+				 se.reaction,
+				 se.look_cover_write_check,
+				 se.matching,
+				 se.pairing,
+				 se.quiz,
+				 se.gap_fill,
+				 se.sentence_drag_and_drop
 	FROM esl_engag AS se
 		LEFT JOIN updated_bundle AS ub
 			ON se.user_id = ub.user_id;
 
 
-	-- Pivoting the table to get games_played by each pupil
-	-- DROP TABLE IF EXISTS esl_engagement;
+	-- Pivoting the table to get games_played by each pupil for the following games:
+	-- through_the_binoculars, wordsearch, anagram, reaction, look_cover_write_check, matching, pairing, quiz, gap_fill,sentence_drag_and_drop
 
+	-- DROP TABLE IF EXISTS esl_engagement;
 	-- CREATE TABLE esl_engagement
 	-- COMMENT '-name-PG-name- -desc-For looking at user engagement with the esl web app-desc- -dim-App product-dim- -gdpr-No issue-gdpr- -type-type-'
 	TRUNCATE analytics.esl_engagement;

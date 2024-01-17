@@ -62,7 +62,7 @@ BEGIN
 				 tppp.quiz,
 				 tppp.shadow_matching
 	FROM twinkl.twinkl_puzzled_pupil_progress AS tppp
-		LEFT JOIN twinkl.twinkl_puzzled_level AS tpl
+		JOIN twinkl.twinkl_puzzled_level AS tpl
 			ON tppp.level_id = tpl.id;
 
 -- Create a new table with the desired structure and attaching world info
@@ -72,60 +72,30 @@ BEGIN
 	CREATE TEMPORARY TABLE new_puzzled
 		(KEY (pupil_id))
 	SELECT pl.id,
-				 pupil_id,
-				 created_date AS played_date,
+				 pl.pupil_id,
+				 IFNULL(updated_date, created_date) AS played_date,
 				 pl.level_id,
 				 pl.level_name,
 				 tpw.world_name,
-				 wordsearch,
-				 anagram,
-				 classic_jigsaw,
-				 word_matching,
-				 strips_jigsaw,
-				 sliding_tiles,
-				 rotating_tiles,
-				 switching_tiles,
-				 puzzling_pairs,
-				 through_the_binoculars,
-				 quiz,
-				 shadow_matching
+				 pl.wordsearch,
+				 pl.anagram,
+				 pl.classic_jigsaw,
+				 pl.word_matching,
+				 pl.strips_jigsaw,
+				 pl.sliding_tiles,
+				 pl.rotating_tiles,
+				 pl.switching_tiles,
+				 pl.puzzling_pairs,
+				 pl.through_the_binoculars,
+				 pl.quiz,
+				 pl.shadow_matching
 	FROM puzzled_level AS pl
-		LEFT JOIN twinkl.twinkl_puzzled_world_level AS tpwl
+		JOIN twinkl.twinkl_puzzled_world_level AS tpwl
 			ON pl.level_id = tpwl.level_id
-		LEFT JOIN twinkl.twinkl_puzzled_level AS tpl
+		JOIN twinkl.twinkl_puzzled_level AS tpl
 			ON tpwl.level_id = tpl.id
-		LEFT JOIN twinkl.twinkl_puzzled_world AS tpw
-			ON tpwl.world_id = tpw.id
-	WHERE updated_date IS NULL
-
-	UNION ALL
-
-	SELECT pl.id,
-				 pupil_id,
-				 updated_date AS played_date,
-				 pl.level_id,
-				 pl.level_name,
-				 tpw.world_name,
-				 wordsearch,
-				 anagram,
-				 classic_jigsaw,
-				 word_matching,
-				 strips_jigsaw,
-				 sliding_tiles,
-				 rotating_tiles,
-				 switching_tiles,
-				 puzzling_pairs,
-				 through_the_binoculars,
-				 quiz,
-				 shadow_matching
-	FROM puzzled_level AS pl
-		LEFT JOIN twinkl.twinkl_puzzled_world_level AS tpwl
-			ON pl.level_id = tpwl.level_id
-		LEFT JOIN twinkl.twinkl_puzzled_level AS tpl
-			ON tpwl.level_id = tpl.id
-		LEFT JOIN twinkl.twinkl_puzzled_world AS tpw
-			ON tpwl.world_id = tpw.id
-	WHERE updated_date IS NOT NULL;
+		JOIN twinkl.twinkl_puzzled_world AS tpw
+			ON tpwl.world_id = tpw.id;
 
 -- Adding teacher info such as career, country
 
@@ -134,33 +104,33 @@ BEGIN
 	CREATE TEMPORARY TABLE puz_engag
 		(KEY (pupil_id, user_id))
 	SELECT np.id,
-				 pupil_id,
-				 played_date,
-				 level_id,
-				 level_name,
-				 world_name,
+				 np.pupil_id,
+				 np.played_date,
+				 np.level_id,
+				 np.level_name,
+				 np.world_name,
 				 p.user_id AS user_id,
-				 car.category_type AS `career`,
+				 car.neat_career_category AS `career`,
 				 c.country AS `country`,
-				 wordsearch,
-				 anagram,
-				 classic_jigsaw,
-				 word_matching,
-				 strips_jigsaw,
-				 sliding_tiles,
-				 rotating_tiles,
-				 switching_tiles,
-				 puzzling_pairs,
-				 through_the_binoculars,
-				 quiz,
-				 shadow_matching
+				 np.wordsearch,
+				 np.anagram,
+				 np.classic_jigsaw,
+				 np.word_matching,
+				 np.strips_jigsaw,
+				 np.sliding_tiles,
+				 np.rotating_tiles,
+				 np.switching_tiles,
+				 np.puzzling_pairs,
+				 np.through_the_binoculars,
+				 np.quiz,
+				 np.shadow_matching
 	FROM new_puzzled AS np
-		LEFT JOIN twinkl.twinkl_pupil AS p
+		JOIN twinkl.twinkl_pupil AS p
 			ON np.pupil_id = p.id
 		LEFT JOIN analytics.dx_user u
 			ON u.user_id = p.user_id
-		LEFT JOIN twinkl.twinkl_career car
-			ON car.id = u.career_id
+		LEFT JOIN analytics.career_category_overview car
+			ON car.id = u.career_category_id
 		LEFT JOIN analytics.dx_country c
 			ON c.country_id = u.country_id;
 
@@ -234,37 +204,40 @@ BEGIN
 		 shadow_matching INT,
 		 KEY (pupil_id, user_id))
 		COMMENT '-name-PG-name- -desc-Staging table for Puzzled web app engagement-desc-'
-	SELECT id,
-				 pupil_id,
-				 played_date,
-				 level_id,
-				 level_name,
-				 world_name,
+	SELECT pe.id,
+				 pe.pupil_id,
+				 pe.played_date,
+				 pe.level_id,
+				 pe.level_name,
+				 pe.world_name,
 				 pe.user_id,
-				 career,
-				 country,
+				 pe.career,
+				 pe.country,
 				 ub.bundle_name,
-				 wordsearch,
-				 anagram,
-				 classic_jigsaw,
-				 word_matching,
-				 strips_jigsaw,
-				 sliding_tiles,
-				 rotating_tiles,
-				 switching_tiles,
-				 puzzling_pairs,
-				 through_the_binoculars,
-				 quiz,
-				 shadow_matching
+				 pe.wordsearch,
+				 pe.anagram,
+				 pe.classic_jigsaw,
+				 pe.word_matching,
+				 pe.strips_jigsaw,
+				 pe.sliding_tiles,
+				 pe.rotating_tiles,
+				 pe.switching_tiles,
+				 pe.puzzling_pairs,
+				 pe.through_the_binoculars,
+				 pe.quiz,
+				 pe.shadow_matching
 	FROM puz_engag AS pe
 		LEFT JOIN updated_bundle AS ub
 			ON pe.user_id = ub.user_id;
 
 
-	-- Pivoting the table to get games_played by each pupil in a single column
+	-- Pivoting the table to get games_played by each pupil in a single column for the following games:
+	-- wordsearch, anagram, classic_jigsaw, word_matching, strips_jigsaw, sliding_tiles,rotating_tiles, switching_tiles, puzzling_pairs,
+	-- through_the_binoculars, quiz, shadow_matching
 
 	-- TRUNCATE analytics.esl_engagement;
 	-- INSERT INTO analytics.puzzled_engagement
+
 	DROP TABLE IF EXISTS puzzled_engagement;
 
 	CREATE TABLE puzzled_engagement
@@ -484,9 +457,16 @@ END;
 
 CALL p_puzzled_engagement();
 
--- Event code
+-- Event code for all web apps - engagement views
+DROP EVENT IF EXISTS analytics.e_puzzled_engagement;
 
-CREATE EVENT IF NOT EXISTS analytics.e_puzzled_engagement
+DROP EVENT IF EXISTS analytics.e_esl_engagement;
+
+DROP EVENT IF EXISTS analytics.e_spelling_engagement;
+
+DROP EVENT IF EXISTS analytics.e_apps_engagement;
+
+CREATE EVENT IF NOT EXISTS analytics.e_apps_engagement
 	ON SCHEDULE
 		EVERY 1 DAY
 			STARTS CURRENT_TIMESTAMP
@@ -496,10 +476,29 @@ CREATE EVENT IF NOT EXISTS analytics.e_puzzled_engagement
 	DO
 	BEGIN
 		--
-		CALL `analytics_procedure_logging_start`('e_puzzled_engagement');
+		CALL `analytics_procedure_logging_start`('e_apps_engagement');
+		--
+		--
+		CALL `analytics_procedure_event_logging_start`('p_puzzled_engagement', 'e_apps_engagement');
 		--
 		CALL `p_puzzled_engagement`();
 		--
-		CALL `analytics_procedure_logging_stop`('e_puzzled_engagement');
+		CALL `analytics_procedure_event_logging_stop`('p_puzzled_engagement', 'e_apps_engagement');
 		--
+		CALL `analytics_procedure_event_logging_start`('p_esl_engagement', 'e_apps_engagement');
+		--
+		CALL `p_esl_engagement`();
+		--
+		CALL `analytics_procedure_event_logging_stop`('p_esl_engagement', 'e_apps_engagement');
+		--
+		CALL `analytics_procedure_event_logging_start`('p_spelling_engagement', 'e_apps_engagement');
+		--
+		CALL `p_spelling_engagement`();
+		--
+		CALL `analytics_procedure_event_logging_stop`('p_spelling_engagement', 'e_apps_engagement');
+		--
+		--
+		CALL `analytics_procedure_logging_stop`('e_apps_engagement');
+		--
+
 	END;

@@ -27,9 +27,9 @@ BEGIN
 		 created_date DATETIME,
 		 updated_date DATETIME,
 		 level_id INT,
-		 level_name VARCHAR(20),
-		 reference VARCHAR(20),
-		 reference_display VARCHAR(20),
+		 level_name VARCHAR(225),
+		 reference VARCHAR(225),
+		 reference_display VARCHAR(225),
 		 gem_count INT,
 		 star_count INT,
 		 bronze_medal INT,
@@ -51,7 +51,7 @@ BEGIN
 				 tspp.silver_medal,
 				 tspp.gold_medal
 	FROM twinkl.twinkl_spelling_pupil_progress AS tspp
-		LEFT JOIN twinkl.twinkl_spelling_level AS tsl
+		JOIN twinkl.twinkl_spelling_level AS tsl
 			ON tspp.level_id = tsl.id;
 
 -- Create a new table with the desired structure and attaching world info
@@ -62,46 +62,22 @@ BEGIN
 		(KEY (pupil_id))
 	SELECT la.id,
 				 la.pupil_id,
-				 created_date AS played_date,
+				 IFNULL(updated_date, created_date) AS played_date,
 				 la.level_id,
-				 level_name,
-				 reference,
-				 reference_display,
+				 la.level_name,
+				 la.reference,
+				 la.reference_display,
 				 tsw.name AS world_name,
-				 gem_count,
-				 star_count,
-				 bronze_medal,
-				 silver_medal,
-				 gold_medal
+				 la.gem_count,
+				 la.star_count,
+				 la.bronze_medal,
+				 la.silver_medal,
+				 la.gold_medal
 	FROM level_accessed AS la
-		LEFT JOIN twinkl.twinkl_spelling_world_level AS tswl
+		JOIN twinkl.twinkl_spelling_world_level AS tswl
 			ON la.level_id = tswl.level_id
-		LEFT JOIN twinkl.twinkl_spelling_world AS tsw
-			ON tswl.world_id = tsw.id
-	WHERE updated_date IS NULL
-
-
-	UNION ALL
-
-	SELECT la.id,
-				 la.pupil_id,
-				 la.updated_date AS played_date,
-				 la.level_id,
-				 level_name,
-				 reference,
-				 reference_display,
-				 tsw.name AS world_name,
-				 gem_count,
-				 star_count,
-				 bronze_medal,
-				 silver_medal,
-				 gold_medal
-	FROM level_accessed AS la
-		LEFT JOIN twinkl.twinkl_spelling_world_level AS tswl
-			ON la.level_id = tswl.level_id
-		LEFT JOIN twinkl.twinkl_spelling_world AS tsw
-			ON tswl.world_id = tsw.id
-	WHERE updated_date IS NOT NULL;
+		JOIN twinkl.twinkl_spelling_world AS tsw
+			ON tswl.world_id = tsw.id;
 
 -- Adding teacher info such as career, country
 
@@ -110,31 +86,30 @@ BEGIN
 	CREATE TEMPORARY TABLE spellings_engag
 		(KEY (user_id))
 	SELECT ns.id,
-				 pupil_id,
-				 played_date,
-				 level_id,
-				 level_name,
-				 reference,
-				 reference_display,
-				 world_name,
+				 ns.pupil_id,
+				 ns.played_date,
+				 ns.level_id,
+				 ns.level_name,
+				 ns.reference,
+				 ns.reference_display,
+				 ns.world_name,
 				 p.user_id AS user_id,
-				 car.category_type AS `career`,
+				 car.neat_career_category AS `career`,
 				 c.country AS `country`,
-				 gem_count,
-				 star_count,
-				 bronze_medal,
-				 silver_medal,
-				 gold_medal
+				 ns.gem_count,
+				 ns.star_count,
+				 ns.bronze_medal,
+				 ns.silver_medal,
+				 ns.gold_medal
 	FROM new_spellings ns
-		LEFT JOIN twinkl.twinkl_pupil AS p
+		JOIN twinkl.twinkl_pupil AS p
 			ON ns.pupil_id = p.id
 		LEFT JOIN analytics.dx_user u
 			ON u.user_id = p.user_id
-		LEFT JOIN twinkl.twinkl_career car
-			ON car.id = u.career_id
+		LEFT JOIN analytics.career_category_overview car
+			ON car.id = u.career_category_id
 		LEFT JOIN analytics.dx_country c
 			ON c.country_id = u.country_id;
-
 
 -- Creating temporary table to access bundle_id from sub_ux
 
@@ -199,23 +174,23 @@ BEGIN
 		 gold_medal INT,
 		 KEY (pupil_id))
 		COMMENT '-name-PG-name- -desc-Staging table for spelling engagement-desc-'
-	SELECT id,
-				 pupil_id,
-				 played_date,
-				 level_id,
-				 level_name,
-				 reference,
-				 reference_display,
-				 world_name,
+	SELECT se.id,
+				 se.pupil_id,
+				 se.played_date,
+				 se.level_id,
+				 se.level_name,
+				 se.reference,
+				 se.reference_display,
+				 se.world_name,
 				 se.user_id,
-				 career,
-				 country,
+				 se.career,
+				 se.country,
 				 ub.bundle_name,
-				 gem_count,
-				 star_count,
-				 bronze_medal,
-				 silver_medal,
-				 gold_medal
+				 se.gem_count,
+				 se.star_count,
+				 se.bronze_medal,
+				 se.silver_medal,
+				 se.gold_medal
 	FROM spellings_engag AS se
 		LEFT JOIN updated_bundle AS ub
 			ON se.user_id = ub.user_id;
@@ -223,7 +198,10 @@ BEGIN
 
 	-- Pivoting the table to get gems/stars collected by each pupil
 
-/*	DROP TABLE IF EXISTS spelling_engagement;
+	-- TRUNCATE analytics.spelling_engagement;
+	-- INSERT INTO analytics.spelling_engagement
+
+	DROP TABLE IF EXISTS spelling_engagement;
 
 	CREATE TABLE spelling_engagement
 		(id INT,
@@ -243,11 +221,6 @@ BEGIN
 		 medal VARCHAR(20),
 		 KEY (pupil_id))
 		COMMENT '-name-PG-name- -desc-For looking at user engagement with the spelling web app-desc- -dim-App product-dim- -gdpr-No issue-gdpr- -type-type-'
-*/
-	-- Pivoting the table to get gems/stars collected by each pupil
-
-	TRUNCATE analytics.spelling_engagement;
-	INSERT INTO analytics.spelling_engagement
 	SELECT id,
 				 pupil_id,
 				 played_date,
@@ -260,9 +233,9 @@ BEGIN
 				 career,
 				 country,
 				 bundle_name,
-				 'gem' AS reward,
-				 gem_count AS reward_count,
-				 CASE
+				 'gem' AS reward,           -- Name of the reward gem/star
+				 gem_count AS reward_count, -- Count of number of rewards collected
+				 CASE -- Medal won for each reward type
 					 WHEN bronze_medal = 1
 						 THEN 'bronze'
 					 WHEN silver_medal = 1
@@ -287,9 +260,9 @@ BEGIN
 				 career,
 				 country,
 				 bundle_name,
-				 'star' AS reward,
-				 star_count AS reward_count,
-				 CASE
+				 'star' AS reward,           -- Name of the reward gem/star
+				 star_count AS reward_count, -- Count of number of rewards collected
+				 CASE -- Medal won for each reward type
 					 WHEN bronze_medal = 1
 						 THEN 'bronze'
 					 WHEN silver_medal = 1
